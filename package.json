@@ -1,0 +1,24 @@
+{
+  "name": "serverless-dynamodb-parameters",
+  "version": "1.0.0",
+  "description": "Pull variables from DynamoDB for serverless",
+  "main": "index.js",
+  "engines" : { "node" : ">=8.10.0" },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/chronotc/serverless-dynamodb-parameters.git"
+  },
+  "keywords": [],
+  "author": "Silla Tan",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/chronotc/serverless-dynamodb-parameters/issues"
+  },
+  "homepage": "https://github.com/chronotc/serverless-dynamodb-parameters#readme",
+  "dependencies": {
+    "lodash.get": "^4.4.2"
+  }
+}
