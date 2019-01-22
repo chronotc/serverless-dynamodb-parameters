@@ -56,15 +56,15 @@ module.exports = class ServerlessDynamodbParameters {
   }
 
   validateConfig() {
-    const { tableName, ...rest } = get(this.serverless, 'service.custom.serverless-dynamodb-parameters') || {};
+    const config = get(this.serverless, 'service.custom.serverless-dynamodb-parameters') || {};
 
-    if (!tableName) {
+    if (!get(config, 'tableName')) {
       throw new Error('Table name must be specified under custom.serverless-dynamodb-parameters.tableName')
     }
 
     return {
-      tableName,
-      ...rest
+      ...config,
+      errorOnMissing: get(config, 'errorOnMissing', true) // Default to true
     };
   }
 

@@ -3,7 +3,9 @@
   "version": "1.0.0",
   "description": "Pull variables from DynamoDB for serverless",
   "main": "index.js",
-  "engines" : { "node" : ">=8.10.0" },
+  "engines": {
+    "node": ">=8.10.0"
+  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },

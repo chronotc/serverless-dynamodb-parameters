@@ -15,7 +15,7 @@ custom:
     tableName: theTableName     # required
     errorOnMissing: false       # optional
     sseKmsKey: arn:xxxxxx       # optional
-    
+
 functions:
   hello:
     handler: handler.hello
@@ -31,11 +31,15 @@ The name of the **DynamoDB** table where the parameters are read.
 
 #### `errorOnMissing (optional)`
 
+Default: `true`
+
 An error will be thrown when a parameter is missing.
 
 #### `sseKmsKey (optional)`
 
-Provide a CMK (Customer Master Key) otherwise `alias/aws/dynamodb` will be used.
+Default: `alias/aws/dynamodb`
+
+Provide a CMK (Customer Master Key).
 
 ### Commands
 
