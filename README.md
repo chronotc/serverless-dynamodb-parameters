@@ -56,7 +56,8 @@ Removes the **DynamoDB** table using the name specified in `tableName`
 It is not required that the table is provisioned through the `create_table` command.
 The only requirement is that the table is stored in the following structure
 
-| Name         | Value          |
-|--------------|----------------|
-| thisisthekey | thisisthevalue |
 
+| name         | version              | value             |
+|--------------|----------------------|-------------------|
+| thisisthekey | 00000000000000000002 | thisisthenewvalue |
+| thisisthekey | 00000000000000000001 | thisisthevalue    |

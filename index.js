@@ -1,5 +1,7 @@
 'use strict';
 
+const path = require('path');
+const cfn = require('cfn');
 const get = require('lodash.get');
 
 const DDB_PREFIX = 'ddb';
@@ -97,42 +99,20 @@ module.exports = class ServerlessDynamodbParameters {
   createTable() {
     this.serverless.cli.log('Creating DynamoDB table...');
 
-    const params = JSON.parse(JSON.stringify({
-      AttributeDefinitions: [
-        {
-          AttributeName: 'Name',
-          AttributeType: 'S'
-        }
-      ],
-      KeySchema: [
-        {
-          AttributeName: 'Name',
-          KeyType: 'HASH'
-        },
-      ],
-      ProvisionedThroughput: {
-        ReadCapacityUnits: 1,
-        WriteCapacityUnits: 1
+    return cfn({
+      name: this.config.tableName,
+      template: path.resolve(__dirname, 'cf/dynamodb.yml'),
+      cfParams: {
+        TableName: this.config.tableName
       },
-      TableName: this.config.tableName,
-      SSESpecification: {
-        Enabled: true ,
-        KMSMasterKeyId: this.config.sseKmsKey,
-        SSEType: 'KMS'
+      awsConfig: {
+        region: this.serverless.getProvider('aws').getRegion()
       },
-      StreamSpecification: {
-        StreamEnabled: true,
-        StreamViewType: 'NEW_AND_OLD_IMAGES'
-      }
-    }));
-
-    return this.serverless.getProvider('aws').request(
-      'DynamoDB',
-      'createTable',
-      params,
-      { useCache: true }) // Use request cache
+      checkStackInterval: 5000
+    })
       .then(() => this.serverless.cli.log(`DynamoDB table ${this.config.tableName} created`))
       .catch((err) => {
+        console.log('err', err);
         return Promise.reject(new this.serverless.classes.Error(err.message));
       });
   }
@@ -140,13 +120,12 @@ module.exports = class ServerlessDynamodbParameters {
   deleteTable() {
     this.serverless.cli.log('Deleting DynamoDB table...');
 
-    return this.serverless.getProvider('aws').request(
-      'DynamoDB',
-      'deleteTable',
-      {
-        TableName: this.config.tableName
-      },
-      { useCache: true }) // Use request cache
+    return cfn.delete({
+      name: this.config.tableName,
+      awsConfig: {
+        region: this.serverless.getProvider('aws').getRegion()
+      }
+    })
       .then(() => this.serverless.cli.log(`DynamoDB table ${this.config.tableName} deleted`))
       .catch((err) => {
         return Promise.reject(new this.serverless.classes.Error(err.message));
