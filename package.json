@@ -7,7 +7,8 @@
     "node": ">=8.10.0"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "lint": "$(npm bin)/eslint .",
+    "test": "$(npm bin)/jest --coverage"
   },
   "repository": {
     "type": "git",
@@ -23,5 +24,11 @@
   "dependencies": {
     "cfn": "^1.8.1",
     "lodash.get": "^4.4.2"
+  },
+  "devDependencies": {
+    "eslint": "^5.12.1",
+    "eslint-plugin-node": "^8.0.1",
+    "eslint-plugin-promise": "^4.0.1",
+    "jest": "^23.6.0"
   }
 }

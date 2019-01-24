@@ -4,11 +4,11 @@ const path = require('path');
 const cfn = require('cfn');
 const get = require('lodash.get');
 
-const DDB_PREFIX = 'ddb';
+// const DDB_PREFIX = 'ddb';
 const DDB_VARIABLE_STRING_REGEX = RegExp(/^(?:\${)?ddb:([a-zA-Z0-9_.\-/]+)/);
 
 module.exports = class ServerlessDynamodbParameters {
-  constructor(serverless, options) {
+  constructor(serverless) {
     this.serverless = serverless;
     this.provider = this.serverless.getProvider('aws'); // only allow plugin to run on aws
 
