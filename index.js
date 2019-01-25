@@ -27,7 +27,7 @@ module.exports = class ServerlessDynamodbParameters {
 
     this.serverless.variables.warnIfNotFound = (variableString, valueToPopulate) => {
       if (variableString.match(DDB_VARIABLE_STRING_REGEX) && this.config.errorOnMissing) {
-        const message = `A valid DDB to satisfy the declaration '${variableString}' could not be found.`;
+        const message = `Value for '${variableString}' could not be found in Dynamo table '${this.tableName}'.`;
         throw new this.serverless.classes.Error(message);
       }
 
@@ -38,7 +38,9 @@ module.exports = class ServerlessDynamodbParameters {
   validateConfig() {
     const config = get(this.serverless, 'service.custom.serverless-dynamodb-parameters') || {};
 
-    if (!get(config, 'tableName')) {
+    this.tableName = get(config, 'tableName');
+
+    if (!this.tableName) {
       throw new Error('Table name must be specified under custom.serverless-dynamodb-parameters.tableName')
     }
 
