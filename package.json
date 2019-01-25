@@ -4,7 +4,7 @@
   "description": "Pull variables from DynamoDB for serverless",
   "main": "index.js",
   "engines": {
-    "node": ">=8.10.0"
+    "node": ">=6.10.0"
   },
   "scripts": {
     "lint": "$(npm bin)/eslint .",
