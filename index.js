@@ -26,7 +26,6 @@ module.exports = class ServerlessDynamodbParameters {
     }
 
     this.serverless.variables.warnIfNotFound = (variableString, valueToPopulate) => {
-      console.log('here');
       if (variableString.match(DDB_VARIABLE_STRING_REGEX) && this.config.errorOnMissing) {
         const message = `A valid DDB to satisfy the declaration '${variableString}' could not be found.`;
         throw new this.serverless.classes.Error(message);
