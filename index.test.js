@@ -41,11 +41,30 @@ const PluginFactory = (plugin, stage) => {
 
 describe('#ServerlessDynamodbParameters', () => {
 
-  describe('when variable is matched', () => {
-    it('should set the variables from dynamodb in the template', () => {
-      const config = { tableName: 'some-table' };
-      const plugin = PluginFactory(config)
+  describe('when config is invalid', () => {
+    beforeEach(() => jest.clearAllMocks());
 
+    it('should throw an error', () => {
+      const config = {};
+
+      try {
+        PluginFactory(config);
+      } catch(error) {
+        expect(error.message).toEqual('Table name must be specified under custom.serverless-dynamodb-parameters.tableName');
+      }
+    });
+  });
+
+  describe('when variable is matched', () => {
+    let plugin;
+
+    beforeEach(() => {
+      const config = { tableName: 'some-table' };
+      plugin = PluginFactory(config)
+      jest.clearAllMocks();
+    });
+
+    it('should set the variables from dynamodb in the template', () => {
       mockRequest.mockImplementation(() => Promise.resolve({
         Item: { Value: { S: 'some-value' } }
       }));
@@ -56,6 +75,10 @@ describe('#ServerlessDynamodbParameters', () => {
         .getValueFromSource('${ddb:my-variable}', 'property')
         .then(result => {
           expect(result).toEqual('some-value');
+
+          expect(mockTracker).toHaveBeenCalled();
+          expect(mockRequest).toHaveBeenCalled();
+
           expect(mockTracker.mock.calls[0][0]).toEqual('${ddb:my-variable}');
           expect(mockTracker.mock.calls[0][2]).toEqual('property');
 
@@ -70,16 +93,29 @@ describe('#ServerlessDynamodbParameters', () => {
           ]);
         });
     });
-
-    it('should throw an error if variable is missing in dynamodb', () => {
-
-    });
-
   });
 
   describe('when variable is not matched', () => {
+    let plugin;
+
+    beforeEach(() => {
+      const config = { tableName: 'some-table' };
+      plugin = PluginFactory(config)
+      jest.clearAllMocks();
+    });
+
     it('should return the unchanged variable if it does not match regex', () => {
 
+      mockGetValue.mockImplementation(() => 'result');
+
+      const expected = plugin.serverless.variables
+        .getValueFromSource('my-variable', 'property');
+
+      expect(expected).toEqual('result');
+      expect(mockGetValue).toHaveBeenCalledWith('my-variable', 'property');
+
+      expect(mockTracker).not.toHaveBeenCalled();
+      expect(mockRequest).not.toHaveBeenCalled();
     });
   });
 
