@@ -22,7 +22,6 @@
   },
   "homepage": "https://github.com/chronotc/serverless-dynamodb-parameters#readme",
   "dependencies": {
-    "cfn": "^1.8.1",
     "lodash.get": "^4.4.2"
   },
   "devDependencies": {

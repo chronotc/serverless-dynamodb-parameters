@@ -1,7 +1,5 @@
 'use strict';
 
-const path = require('path');
-const cfn = require('cfn');
 const get = require('lodash.get');
 
 // const DDB_PREFIX = 'ddb';
@@ -11,26 +9,6 @@ module.exports = class ServerlessDynamodbParameters {
   constructor(serverless) {
     this.serverless = serverless;
     this.provider = this.serverless.getProvider('aws'); // only allow plugin to run on aws
-
-    this.commands = {
-      create_table: {
-        usage: 'Creates a dynamodb table using the table name defined in serverless.yml',
-        lifecycleEvents: [
-          'create'
-        ],
-      },
-      delete_table: {
-        usage: 'Deletes a dynamodb table using the table name defined in serverless.yml',
-        lifecycleEvents: [
-          'delete'
-        ],
-      },
-    };
-
-    this.hooks = {
-      'create_table:create': this.createTable.bind(this),
-      'delete_table:delete': this.deleteTable.bind(this),
-    };
 
     this.config = this.validateConfig();
 
@@ -91,42 +69,6 @@ module.exports = class ServerlessDynamodbParameters {
         }
 
         return Promise.resolve(undefined);
-      });
-  }
-
-  createTable() {
-    this.serverless.cli.log('Creating DynamoDB table...');
-
-    return cfn({
-      name: this.config.tableName,
-      template: path.resolve(__dirname, 'cf/dynamodb.yml'),
-      cfParams: {
-        TableName: this.config.tableName
-      },
-      awsConfig: {
-        region: this.serverless.getProvider('aws').getRegion()
-      },
-      checkStackInterval: 5000
-    })
-      .then(() => this.serverless.cli.log(`DynamoDB table ${this.config.tableName} created`))
-      .catch((err) => {
-        console.log('err', err);
-        return Promise.reject(new this.serverless.classes.Error(err.message));
-      });
-  }
-
-  deleteTable() {
-    this.serverless.cli.log('Deleting DynamoDB table...');
-
-    return cfn.delete({
-      name: this.config.tableName,
-      awsConfig: {
-        region: this.serverless.getProvider('aws').getRegion()
-      }
-    })
-      .then(() => this.serverless.cli.log(`DynamoDB table ${this.config.tableName} deleted`))
-      .catch((err) => {
-        return Promise.reject(new this.serverless.classes.Error(err.message));
       });
   }
 }
