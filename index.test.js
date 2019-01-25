@@ -73,7 +73,7 @@ describe('#ServerlessDynamodbParameters', () => {
       jest.clearAllMocks();
     });
 
-    it('should set the variables from dynamodb in the template', () => {
+    fit('should set the variables from dynamodb in the template', () => {
       mockRequest.mockImplementation(() => Promise.resolve({
         Item: { Value: { S: 'some-value' } }
       }));

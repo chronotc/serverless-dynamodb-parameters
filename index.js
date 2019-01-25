@@ -1,6 +1,7 @@
 'use strict';
 
 const get = require('lodash.get');
+const AWS = require('aws-sdk');
 
 // const DDB_PREFIX = 'ddb';
 const DDB_VARIABLE_STRING_REGEX = RegExp(/^(?:\${)?ddb:([a-zA-Z0-9_.\-/]+)/);
@@ -50,26 +51,37 @@ module.exports = class ServerlessDynamodbParameters {
   getValueFromDdb(variableString) {
 
     const groups = variableString.match(DDB_VARIABLE_STRING_REGEX);
-    const value = groups[1];
-    return this.serverless.getProvider('aws').request(
-      'DynamoDB',
-      'getItem',
-      {
-        TableName : this.config.tableName,
-        Key: {
-          Name: {
-            S: value
-          }
-        }
-      },
-      { useCache: true }) // Use request cache
-      .then(response => get(response, 'Item.Value.S'))
-      .catch((err) => {
-        if (err.statusCode !== 400) {
-          return Promise.reject(new this.serverless.classes.Error(err.message));
-        }
+    const parameterName = groups[1];
 
-        return Promise.resolve(undefined);
-      });
+    const documentClient = new AWS.DynamoDB.DocumentClient({ convertEmptyValue: true });
+
+    return documentClient.query({
+      Limit: 1,
+      ScanIndexForward: false,
+      KeyConditionExpression: '#name = :name',
+      ExpressionAttributeNames: {
+        '#name': 'name'
+      },
+      ExpressionAttributeValues: {
+        ':name': parameterName
+      }
+    })
+    .promise()
+    .then(res => {
+      const Item = get(res, 'Items.0');
+
+      if (!Item) {
+        throw new this.serverless.classes.Error('Query did not return a result', 400);
+      }
+
+      return Item;
+    })
+    .catch((err) => {
+      if (err.statusCode !== 400) {
+        return Promise.reject(new this.serverless.classes.Error(err.message));
+      }
+
+      return Promise.resolve(undefined);
+    });
   }
 }
