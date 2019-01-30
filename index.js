@@ -73,7 +73,7 @@ module.exports = class ServerlessDynamodbParameters {
     })
     .promise()
     .then(res => {
-      const Item = get(res, 'Items.0');
+      const Item = get(res, 'Items.0.value');
 
       if (!Item) {
         throw new this.serverless.classes.Error('Query did not return a result', 400);

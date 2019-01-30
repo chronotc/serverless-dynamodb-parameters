@@ -79,7 +79,13 @@ describe('#ServerlessDynamodbParameters', () => {
 
     it('should set the variables from dynamodb in the template', () => {
       mockQuery.mockImplementation(() => ({
-        promise: () => Promise.resolve({ Items: [ 'some-value'] })
+        promise: () => Promise.resolve({
+          Items: [{
+            value: 'some-value',
+            name: 'some-name',
+            version: 'some-version'
+          }]
+        })
       }));
 
       mockTracker.mockImplementation((variableString, promise) => promise);
