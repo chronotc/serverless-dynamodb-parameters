@@ -1,38 +1,25 @@
 'use strict';
 
-const path = require('path');
-const cfn = require('cfn');
 const get = require('lodash.get');
+const AWS = require('aws-sdk');
 
-const DDB_PREFIX = 'ddb';
+// const DDB_PREFIX = 'ddb';
 const DDB_VARIABLE_STRING_REGEX = RegExp(/^(?:\${)?ddb:([a-zA-Z0-9_.\-/]+)/);
 
 module.exports = class ServerlessDynamodbParameters {
-  constructor(serverless, options) {
+  constructor(serverless) {
     this.serverless = serverless;
     this.provider = this.serverless.getProvider('aws'); // only allow plugin to run on aws
 
-    this.commands = {
-      create_table: {
-        usage: 'Creates a dynamodb table using the table name defined in serverless.yml',
-        lifecycleEvents: [
-          'create'
-        ],
-      },
-      delete_table: {
-        usage: 'Deletes a dynamodb table using the table name defined in serverless.yml',
-        lifecycleEvents: [
-          'delete'
-        ],
-      },
-    };
-
-    this.hooks = {
-      'create_table:create': this.createTable.bind(this),
-      'delete_table:delete': this.deleteTable.bind(this),
-    };
-
     this.config = this.validateConfig();
+
+    AWS.config.update({ region: this.provider.getRegion() });
+    this.documentClient = new AWS.DynamoDB.DocumentClient({
+      params: {
+        TableName: this.config.tableName
+      },
+      convertEmptyValue: true
+    });
 
     const originalGetValueFromSource = serverless.variables.getValueFromSource.bind(serverless.variables);
     const originalTrackerAdd = serverless.variables.tracker.add.bind(serverless.variables.tracker);
@@ -49,7 +36,7 @@ module.exports = class ServerlessDynamodbParameters {
 
     this.serverless.variables.warnIfNotFound = (variableString, valueToPopulate) => {
       if (variableString.match(DDB_VARIABLE_STRING_REGEX) && this.config.errorOnMissing) {
-        const message = `A valid DDB to satisfy the declaration '${variableString}' could not be found.`;
+        const message = `Value for '${variableString}' could not be found in Dynamo table '${this.config.tableName}'.`;
         throw new this.serverless.classes.Error(message);
       }
 
@@ -59,76 +46,47 @@ module.exports = class ServerlessDynamodbParameters {
 
   validateConfig() {
     const config = get(this.serverless, 'service.custom.serverless-dynamodb-parameters') || {};
+    const tableName = get(config, 'tableName');
 
-    if (!get(config, 'tableName')) {
+    if (!tableName) {
       throw new Error('Table name must be specified under custom.serverless-dynamodb-parameters.tableName')
     }
 
-    return {
-      ...config,
-      errorOnMissing: get(config, 'errorOnMissing', true) // Default to true
-    };
+    return Object.assign({}, config, { errorOnMissing: get(config, 'errorOnMissing', true)});
   }
 
   getValueFromDdb(variableString) {
 
     const groups = variableString.match(DDB_VARIABLE_STRING_REGEX);
-    const value = groups[1];
-    return this.serverless.getProvider('aws').request(
-      'DynamoDB',
-      'getItem',
-      {
-        TableName : this.config.tableName,
-        Key: {
-          Name: {
-            S: value
-          }
-        }
+    const parameterName = groups[1];
+
+    return this.documentClient.query({
+      Limit: 1,
+      ScanIndexForward: false,
+      KeyConditionExpression: '#name = :name',
+      ExpressionAttributeNames: {
+        '#name': 'name'
       },
-      { useCache: true }) // Use request cache
-      .then(response => get(response, 'Item.Value.S'))
-      .catch((err) => {
-        if (err.statusCode !== 400) {
-          return Promise.reject(new this.serverless.classes.Error(err.message));
-        }
-
-        return Promise.resolve(undefined);
-      });
-  }
-
-  createTable() {
-    this.serverless.cli.log('Creating DynamoDB table...');
-
-    return cfn({
-      name: this.config.tableName,
-      template: path.resolve(__dirname, 'cf/dynamodb.yml'),
-      cfParams: {
-        TableName: this.config.tableName
-      },
-      awsConfig: {
-        region: this.serverless.getProvider('aws').getRegion()
-      },
-      checkStackInterval: 5000
-    })
-      .then(() => this.serverless.cli.log(`DynamoDB table ${this.config.tableName} created`))
-      .catch((err) => {
-        console.log('err', err);
-        return Promise.reject(new this.serverless.classes.Error(err.message));
-      });
-  }
-
-  deleteTable() {
-    this.serverless.cli.log('Deleting DynamoDB table...');
-
-    return cfn.delete({
-      name: this.config.tableName,
-      awsConfig: {
-        region: this.serverless.getProvider('aws').getRegion()
+      ExpressionAttributeValues: {
+        ':name': parameterName
       }
     })
-      .then(() => this.serverless.cli.log(`DynamoDB table ${this.config.tableName} deleted`))
-      .catch((err) => {
+    .promise()
+    .then(res => {
+      const Item = get(res, 'Items.0.value');
+
+      if (!Item) {
+        throw new this.serverless.classes.Error('Query did not return a result', 400);
+      }
+
+      return Item;
+    })
+    .catch((err) => {
+      if (err.statusCode !== 400) {
         return Promise.reject(new this.serverless.classes.Error(err.message));
-      });
+      }
+
+      return Promise.resolve(undefined);
+    });
   }
 }

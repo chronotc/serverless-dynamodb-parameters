@@ -4,10 +4,11 @@
   "description": "Pull variables from DynamoDB for serverless",
   "main": "index.js",
   "engines": {
-    "node": ">=8.10.0"
+    "node": ">=6.10.0"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "lint": "$(npm bin)/eslint .",
+    "test": "$(npm bin)/jest --coverage"
   },
   "repository": {
     "type": "git",
@@ -20,8 +21,17 @@
     "url": "https://github.com/chronotc/serverless-dynamodb-parameters/issues"
   },
   "homepage": "https://github.com/chronotc/serverless-dynamodb-parameters#readme",
+  "peerDependencies": {
+    "aws-sdk": "^2.0.0"
+  },
   "dependencies": {
-    "cfn": "^1.8.1",
     "lodash.get": "^4.4.2"
+  },
+  "devDependencies": {
+    "aws-sdk": "^2.0.0",
+    "eslint": "^5.12.1",
+    "eslint-plugin-node": "^8.0.1",
+    "eslint-plugin-promise": "^4.0.1",
+    "jest": "^23.6.0"
   }
 }
