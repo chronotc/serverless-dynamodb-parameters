@@ -96,6 +96,19 @@ describe('#ServerlessDynamodbParameters', () => {
           expect(result).toEqual('some-value');
 
           expect(mockTracker).toHaveBeenCalled();
+          expect(mockQuery).toHaveBeenCalled();
+
+          expect(mockQuery.mock.calls[0][0]).toEqual({
+            Limit: 1,
+            ScanIndexForward: false,
+            KeyConditionExpression: '#name = :name',
+            ExpressionAttributeNames: {
+              '#name': 'name'
+            },
+            ExpressionAttributeValues: {
+              ':name': 'my-variable'
+            }
+          });
 
           expect(mockTracker.mock.calls[0][0]).toEqual('${ddb:my-variable}');
           expect(mockTracker.mock.calls[0][2]).toEqual('property');
