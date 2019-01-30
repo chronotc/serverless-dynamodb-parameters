@@ -1,9 +1,14 @@
+const AWS = require('aws-sdk');
 const Plugin = require('./index')
 
-const mockRequest = jest.fn();
 const mockTracker = jest.fn();
 const mockGetValue = jest.fn();
 const mockWarn = jest.fn();
+const mockQuery = jest.fn();
+
+AWS.DynamoDB.DocumentClient.mockImplementation(function() {
+  return { query: mockQuery };
+});
 
 const PluginFactory = (plugin, stage) => {
   stage = stage || 'dev'
@@ -31,7 +36,6 @@ const PluginFactory = (plugin, stage) => {
     },
     getProvider: () => {
       return {
-        request: mockRequest,
         getRegion: () => 'fooregion',
         getStage: () => stage,
       }
@@ -68,14 +72,14 @@ describe('#ServerlessDynamodbParameters', () => {
     let plugin;
 
     beforeEach(() => {
+      jest.clearAllMocks();
       const config = { 'serverless-dynamodb-parameters':  { tableName: 'some-table' } };
       plugin = PluginFactory(config)
-      jest.clearAllMocks();
     });
 
-    fit('should set the variables from dynamodb in the template', () => {
-      mockRequest.mockImplementation(() => Promise.resolve({
-        Item: { Value: { S: 'some-value' } }
+    it('should set the variables from dynamodb in the template', () => {
+      mockQuery.mockImplementation(() => ({
+        promise: () => Promise.resolve({ Items: [ 'some-value'] })
       }));
 
       mockTracker.mockImplementation((variableString, promise) => promise);
@@ -86,25 +90,17 @@ describe('#ServerlessDynamodbParameters', () => {
           expect(result).toEqual('some-value');
 
           expect(mockTracker).toHaveBeenCalled();
-          expect(mockRequest).toHaveBeenCalled();
 
           expect(mockTracker.mock.calls[0][0]).toEqual('${ddb:my-variable}');
           expect(mockTracker.mock.calls[0][2]).toEqual('property');
-
-          expect(mockRequest.mock.calls[0]).toEqual([
-            'DynamoDB',
-            'getItem',
-            {
-              TableName: 'some-table',
-              Key: { Name: { S: 'my-variable' } }
-            },
-            { useCache: true }
-          ]);
         });
     });
 
     it('should throw error if there is error fetching parameter', () => {
-      mockRequest.mockImplementation(() => Promise.reject(new Error('some error occured')));
+      mockQuery.mockImplementation(() => ({
+        promise: () => Promise.reject(new Error('some error occured'))
+      }));
+
       mockTracker.mockImplementation((variableString, promise) => promise);
 
       return plugin.serverless.variables
@@ -117,7 +113,8 @@ describe('#ServerlessDynamodbParameters', () => {
       const error = new Error('some error');
       error.statusCode = 400;
 
-      mockRequest.mockImplementation(() => Promise.reject(error));
+      mockQuery.mockImplementation(() => ({ promise: () => Promise.reject(error)}));
+
       mockTracker.mockImplementation((variableString, promise) => promise);
 
       return plugin.serverless.variables
@@ -146,7 +143,6 @@ describe('#ServerlessDynamodbParameters', () => {
       expect(mockGetValue).toHaveBeenCalledWith('my-variable', 'property');
 
       expect(mockTracker).not.toHaveBeenCalled();
-      expect(mockRequest).not.toHaveBeenCalled();
     });
   });
 

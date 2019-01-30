@@ -13,6 +13,14 @@ module.exports = class ServerlessDynamodbParameters {
 
     this.config = this.validateConfig();
 
+    AWS.config.update({ region: this.provider.getRegion() });
+    this.documentClient = new AWS.DynamoDB.DocumentClient({
+      params: {
+        TableName: this.config.tableName
+      },
+      convertEmptyValue: true
+    });
+
     const originalGetValueFromSource = serverless.variables.getValueFromSource.bind(serverless.variables);
     const originalTrackerAdd = serverless.variables.tracker.add.bind(serverless.variables.tracker);
     const originalWarnIfNotFound = serverless.variables.warnIfNotFound.bind(serverless.variables);
@@ -28,7 +36,7 @@ module.exports = class ServerlessDynamodbParameters {
 
     this.serverless.variables.warnIfNotFound = (variableString, valueToPopulate) => {
       if (variableString.match(DDB_VARIABLE_STRING_REGEX) && this.config.errorOnMissing) {
-        const message = `Value for '${variableString}' could not be found in Dynamo table '${this.tableName}'.`;
+        const message = `Value for '${variableString}' could not be found in Dynamo table '${this.config.tableName}'.`;
         throw new this.serverless.classes.Error(message);
       }
 
@@ -38,10 +46,9 @@ module.exports = class ServerlessDynamodbParameters {
 
   validateConfig() {
     const config = get(this.serverless, 'service.custom.serverless-dynamodb-parameters') || {};
+    const tableName = get(config, 'tableName');
 
-    this.tableName = get(config, 'tableName');
-
-    if (!this.tableName) {
+    if (!tableName) {
       throw new Error('Table name must be specified under custom.serverless-dynamodb-parameters.tableName')
     }
 
@@ -53,9 +60,7 @@ module.exports = class ServerlessDynamodbParameters {
     const groups = variableString.match(DDB_VARIABLE_STRING_REGEX);
     const parameterName = groups[1];
 
-    const documentClient = new AWS.DynamoDB.DocumentClient({ convertEmptyValue: true });
-
-    return documentClient.query({
+    return this.documentClient.query({
       Limit: 1,
       ScanIndexForward: false,
       KeyConditionExpression: '#name = :name',
