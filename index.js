@@ -3,7 +3,6 @@
 const get = require('lodash.get');
 const AWS = require('aws-sdk');
 
-// const DDB_PREFIX = 'ddb';
 const DDB_VARIABLE_STRING_REGEX = RegExp(/^(?:\${)?ddb:([a-zA-Z0-9_.\-/]+)/);
 
 module.exports = class ServerlessDynamodbParameters {
@@ -23,7 +22,6 @@ module.exports = class ServerlessDynamodbParameters {
 
     const originalGetValueFromSource = serverless.variables.getValueFromSource.bind(serverless.variables);
     const originalTrackerAdd = serverless.variables.tracker.add.bind(serverless.variables.tracker);
-    const originalWarnIfNotFound = serverless.variables.warnIfNotFound.bind(serverless.variables);
 
     this.serverless.variables.getValueFromSource = (variableString, propertyString) => {
       if (variableString.match(DDB_VARIABLE_STRING_REGEX)) {
@@ -32,15 +30,6 @@ module.exports = class ServerlessDynamodbParameters {
       }
 
       return originalGetValueFromSource(variableString, propertyString);
-    }
-
-    this.serverless.variables.warnIfNotFound = (variableString, valueToPopulate) => {
-      if (variableString.match(DDB_VARIABLE_STRING_REGEX) && this.config.errorOnMissing) {
-        const message = `Value for '${variableString}' could not be found in Dynamo table '${this.config.tableName}'.`;
-        throw new this.serverless.classes.Error(message);
-      }
-
-      return originalWarnIfNotFound(variableString, valueToPopulate);
     }
   }
 
@@ -56,11 +45,10 @@ module.exports = class ServerlessDynamodbParameters {
   }
 
   getValueFromDdb(variableString) {
-
     const groups = variableString.match(DDB_VARIABLE_STRING_REGEX);
     const parameterName = groups[1];
 
-    return this.documentClient.query({
+    const params = {
       Limit: 1,
       ScanIndexForward: false,
       KeyConditionExpression: '#name = :name',
@@ -70,23 +58,21 @@ module.exports = class ServerlessDynamodbParameters {
       ExpressionAttributeValues: {
         ':name': parameterName
       }
-    })
+    };
+
+    return this.documentClient.query(params)
     .promise()
     .then(res => {
-      const Item = get(res, 'Items.0.value');
+      const value = get(res, 'Items.0.value');
 
-      if (!Item) {
+      if (!value) {
         throw new this.serverless.classes.Error('Query did not return a result', 400);
       }
 
-      return Item;
+      return value;
     })
-    .catch((err) => {
-      if (err.statusCode !== 400) {
-        return Promise.reject(new this.serverless.classes.Error(err.message));
-      }
-
-      return Promise.resolve(undefined);
+    .catch(() => {
+      return Promise.reject(new this.serverless.classes.Error(`Value for '${variableString}' could not be found in Dynamo table '${this.config.tableName}`));
     });
   }
 }

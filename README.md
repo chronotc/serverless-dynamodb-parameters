@@ -2,6 +2,11 @@
 
 Use parameters sourced from **DynamoDB** in `serverless.yml`
 
+
+## IMPORTANT
+
+This has only been tested with serverless `1.36.3`
+
 ## Example
 
 ### Syntax
@@ -14,7 +19,6 @@ custom:
   serverless-dynamodb-parameters:
     tableName: theTableName     # required
     errorOnMissing: false       # optional
-    sseKmsKey: arn:xxxxxx       # optional
 
 functions:
   hello:
@@ -35,26 +39,12 @@ Default: `true`
 
 An error will be thrown when a parameter is missing.
 
-#### `sseKmsKey (optional)`
-
-Default: `alias/aws/dynamodb`
-
-Provide a CMK (Customer Master Key).
-
-### Commands
-
-#### `create_table`
-
-Provision a **DynamoDB** table. This will utilize the `tableName` and `sseKmsKey (optional)` provided to create the table.
-
-#### `delete_table`
-
-Removes the **DynamoDB** table using the name specified in `tableName`
-
 ## Dynamodb
 
-It is not required that the table is provisioned through the `create_table` command.
 The only requirement is that the table is stored in the following structure
+
+Partition Key: name
+Sort Key: version
 
 
 | name         | version              | value             |
