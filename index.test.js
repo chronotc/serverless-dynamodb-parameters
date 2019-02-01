@@ -115,20 +115,19 @@ describe('#ServerlessDynamodbParameters', () => {
         });
     });
 
-    it('should throw error if there is error fetching parameter', () => {
+    it('should throw error if the parameter has no value', () => {
       mockQuery.mockImplementation(() => ({
-        promise: () => Promise.reject(new Error('some error occured'))
+        promise: () => Promise.resolve({ Items: [] })
       }));
 
       mockTracker.mockImplementation((variableString, promise) => promise);
 
-      return plugin.serverless.variables
-        .getValueFromSource('${ddb:my-variable}', 'property')
-        .then(() => expect(true).toEqual(false))
-        .catch(error => expect(error.message).toEqual('some error occured'));
+      return expect(plugin.serverless.variables.getValueFromSource('${ddb:my-variable}', 'property'))
+        .rejects.toEqual(new Error("Value for '${ddb:my-variable}' could not be found in Dynamo table 'some-table"));
+
     });
 
-    it('should return undefined if error statuscode is 400', () => {
+    it('should reject if there is error fetching parameter', () => {
       const error = new Error('some error');
       error.statusCode = 400;
 
@@ -136,9 +135,8 @@ describe('#ServerlessDynamodbParameters', () => {
 
       mockTracker.mockImplementation((variableString, promise) => promise);
 
-      return plugin.serverless.variables
-        .getValueFromSource('${ddb:my-variable}', 'property')
-        .then(result => expect(result).toEqual(undefined));
+      return expect(plugin.serverless.variables.getValueFromSource('${ddb:my-variable}', 'property'))
+        .rejects.toEqual(new Error("Value for '${ddb:my-variable}' could not be found in Dynamo table 'some-table"));
     });
   });
 
@@ -162,32 +160,6 @@ describe('#ServerlessDynamodbParameters', () => {
       expect(mockGetValue).toHaveBeenCalledWith('my-variable', 'property');
 
       expect(mockTracker).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('#warnIfNotFound', () => {
-    let plugin;
-
-    beforeEach(() => {
-      const config = { 'serverless-dynamodb-parameters':  { tableName: 'some-table' } };
-      plugin = PluginFactory(config)
-      jest.clearAllMocks();
-    });
-
-    it('should call original warn if not found when variable does not match regex', () => {
-       plugin.serverless.variables.warnIfNotFound('variable', 'value');
-
-      expect(mockWarn).toHaveBeenCalledWith('variable', 'value');
-    });
-
-    it('should throw error if variable is missing', () => {
-      const variable = '${ddb:my-variable}';
-      try {
-        plugin.serverless.variables.warnIfNotFound(variable, 'value');
-        expect(true).toEqual(false);
-      } catch(error) {
-        expect(error.message).toEqual(`Value for '${variable}' could not be found in Dynamo table 'some-table'.`);
-      }
     });
   });
 })
