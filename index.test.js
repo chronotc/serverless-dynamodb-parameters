@@ -60,11 +60,10 @@ describe('#ServerlessDynamodbParameters', () => {
     it('should throw an error', () => {
       const config = {};
 
-      try {
-        PluginFactory(config);
-      } catch(error) {
-        expect(error.message).toEqual('Table name must be specified under custom.serverless-dynamodb-parameters.tableName');
-      }
+      const plugin = PluginFactory(config);
+      expect(() => plugin.getTableName()).toThrow(
+        'Table name must be specified under custom.serverless-dynamodb-parameters.tableName'
+      );
     });
   });
 
