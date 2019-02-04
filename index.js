@@ -10,16 +10,6 @@ module.exports = class ServerlessDynamodbParameters {
     this.serverless = serverless;
     this.provider = this.serverless.getProvider('aws'); // only allow plugin to run on aws
 
-    this.config = this.validateConfig();
-
-    AWS.config.update({ region: this.provider.getRegion() });
-    this.documentClient = new AWS.DynamoDB.DocumentClient({
-      params: {
-        TableName: this.config.tableName
-      },
-      convertEmptyValue: true
-    });
-
     const originalGetValueFromSource = serverless.variables.getValueFromSource.bind(serverless.variables);
     const originalTrackerAdd = serverless.variables.tracker.add.bind(serverless.variables.tracker);
 
@@ -33,15 +23,23 @@ module.exports = class ServerlessDynamodbParameters {
     }
   }
 
-  validateConfig() {
-    const config = get(this.serverless, 'service.custom.serverless-dynamodb-parameters') || {};
-    const tableName = get(config, 'tableName');
+  getDocumentClient() {
+    AWS.config.update({ region: this.provider.getRegion() });
+    return this.getTableName()
+    .then(tableName => new AWS.DynamoDB.DocumentClient({
+      params: {
+        TableName: tableName
+      },
+      convertEmptyValue: true
+    }));
+  }
 
-    if (!tableName) {
-      throw new Error('Table name must be specified under custom.serverless-dynamodb-parameters.tableName')
-    }
-
-    return Object.assign({}, config, { errorOnMissing: get(config, 'errorOnMissing', true)});
+  getTableName() {
+    const rawTableName = get(this.serverless, 'service.custom.serverless-dynamodb-parameters.tableName');
+    return this.serverless.variables.getValueFromSource('opt:stage', rawTableName)
+    .then(stage => {
+      return rawTableName.replace(new RegExp('\\bopt:stage\\b'), stage);
+    })
   }
 
   getValueFromDdb(variableString) {
@@ -60,8 +58,8 @@ module.exports = class ServerlessDynamodbParameters {
       }
     };
 
-    return this.documentClient.query(params)
-    .promise()
+    return this.getDocumentClient()
+    .then(documentClient => documentClient.query(params).promise())
     .then(res => {
       const value = get(res, 'Items.0.value');
 
@@ -72,7 +70,7 @@ module.exports = class ServerlessDynamodbParameters {
       return value;
     })
     .catch(() => {
-      return Promise.reject(new this.serverless.classes.Error(`Value for '${variableString}' could not be found in Dynamo table '${this.config.tableName}`));
+      return Promise.reject(new this.serverless.classes.Error(`Value for '${variableString}' could not be found in the Dynamo table`));
     });
   }
 }
