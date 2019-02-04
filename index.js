@@ -9,15 +9,8 @@ module.exports = class ServerlessDynamodbParameters {
   constructor(serverless) {
     this.serverless = serverless;
     this.provider = this.serverless.getProvider('aws'); // only allow plugin to run on aws
-
-    this.config = this.validateConfig();
-
-    AWS.config.update({ region: this.provider.getRegion() });
-    this.documentClient = new AWS.DynamoDB.DocumentClient({
-      params: {
-        TableName: this.config.tableName
-      },
-      convertEmptyValue: true
+    AWS.config.update({
+      region: this.provider.getRegion()
     });
 
     const originalGetValueFromSource = serverless.variables.getValueFromSource.bind(serverless.variables);
@@ -33,15 +26,24 @@ module.exports = class ServerlessDynamodbParameters {
     }
   }
 
-  validateConfig() {
-    const config = get(this.serverless, 'service.custom.serverless-dynamodb-parameters') || {};
-    const tableName = get(config, 'tableName');
+  getTableName() {
+    const tableName = get(this.serverless, 'service.custom.serverless-dynamodb-parameters.tableName');
 
     if (!tableName) {
       throw new Error('Table name must be specified under custom.serverless-dynamodb-parameters.tableName')
     }
 
-    return Object.assign({}, config, { errorOnMissing: get(config, 'errorOnMissing', true)});
+    return tableName;
+  }
+
+  getDocumentClient() {
+    const tableName = this.getTableName();
+    return new AWS.DynamoDB.DocumentClient({
+      params: {
+        TableName: tableName
+      },
+      convertEmptyValue: true
+    });
   }
 
   getValueFromDdb(variableString) {
@@ -60,8 +62,8 @@ module.exports = class ServerlessDynamodbParameters {
       }
     };
 
-    return this.documentClient.query(params)
-    .promise()
+    const documentClient = this.getDocumentClient();
+    return documentClient.query(params).promise()
     .then(res => {
       const value = get(res, 'Items.0.value');
 
@@ -72,7 +74,8 @@ module.exports = class ServerlessDynamodbParameters {
       return value;
     })
     .catch(() => {
-      return Promise.reject(new this.serverless.classes.Error(`Value for '${variableString}' could not be found in Dynamo table '${this.config.tableName}`));
+      const tableName = this.getTableName();
+      return Promise.reject(new this.serverless.classes.Error(`Value for '${variableString}' could not be found in the Dynamo table '${tableName}'`));
     });
   }
 }
