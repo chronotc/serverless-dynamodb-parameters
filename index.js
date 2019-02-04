@@ -26,9 +26,18 @@ module.exports = class ServerlessDynamodbParameters {
     }
   }
 
-  getDocumentClient() {
+  getTableName() {
     const tableName = get(this.serverless, 'service.custom.serverless-dynamodb-parameters.tableName');
 
+    if (!tableName) {
+      throw new Error('Table name must be specified under custom.serverless-dynamodb-parameters.tableName')
+    }
+
+    return tableName;
+  }
+
+  getDocumentClient() {
+    const tableName = this.getTableName();
     return new AWS.DynamoDB.DocumentClient({
       params: {
         TableName: tableName
@@ -65,7 +74,8 @@ module.exports = class ServerlessDynamodbParameters {
       return value;
     })
     .catch(() => {
-      return Promise.reject(new this.serverless.classes.Error(`Value for '${variableString}' could not be found in the Dynamo table`));
+      const tableName = this.getTableName();
+      return Promise.reject(new this.serverless.classes.Error(`Value for '${variableString}' could not be found in the Dynamo table '${tableName}'`));
     });
   }
 }
