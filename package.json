@@ -22,7 +22,7 @@
   },
   "homepage": "https://github.com/chronotc/serverless-dynamodb-parameters#readme",
   "peerDependencies": {
-    "serverless": "~1.36.3",
+    "serverless": "~1.35.1",
     "aws-sdk": "^2.0.0"
   },
   "dependencies": {

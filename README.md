@@ -5,7 +5,7 @@ Use parameters sourced from **DynamoDB** in `serverless.yml`
 
 ## IMPORTANT
 
-This has only been tested with serverless `1.36.3`
+This has only been tested with serverless `1.35.1`
 
 ## Example
 
